@@ -96,7 +96,7 @@ class BoardService : Service() {
     }
 
     private fun fetchDue(prefs: Prefs, ids: IntArray, now: Long) {
-        val stopIds = ids.mapNotNull { prefs.stopFor(it)?.id }.toSet()
+        val stopIds = ids.asList().mapNotNull { prefs.stopFor(it)?.id }.toSet()
         for (id in stopIds) {
             val st = Widgets.states.getOrPut(id) { StopState() }
             if (st.loading || now - st.lastAttempt < FETCH_MS) continue

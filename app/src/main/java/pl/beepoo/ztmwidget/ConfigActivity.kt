@@ -162,7 +162,7 @@ class ConfigActivity : ComponentActivity() {
 
     private fun currentStop(): WidgetStop? =
         if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) prefs.stopFor(widgetId)
-        else Widgets.ids(this).firstNotNullOfOrNull { prefs.stopFor(it) }
+        else Widgets.ids(this).asList().firstNotNullOfOrNull { prefs.stopFor(it) }
 
     // ---- wyszukiwarka ----
 
