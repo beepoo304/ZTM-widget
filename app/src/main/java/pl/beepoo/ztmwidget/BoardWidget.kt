@@ -97,13 +97,17 @@ object Widgets {
         }
     }
 
-    /** Dotknięcie: ustawiony widget = odśwież (i obudź na 5 min poza harmonogramem); pusty = wybór przystanku. */
+    /**
+     * Dotknięcie: ustawiony widget idzie przez [TapActivity] (pojedyncze = odśwież / obudź na 5 min,
+     * podwójne = ustawienia); pusty = wybór przystanku.
+     */
     private fun clickIntent(ctx: Context, widgetId: Int, configured: Boolean): PendingIntent {
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         return if (configured) {
-            val i = Intent(ctx, BoardService::class.java).setAction(BoardService.ACTION_TAP)
+            val i = Intent(ctx, TapActivity::class.java)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-            PendingIntent.getForegroundService(ctx, widgetId, i, flags)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            PendingIntent.getActivity(ctx, widgetId, i, flags)
         } else {
             val i = Intent(ctx, ConfigActivity::class.java)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)

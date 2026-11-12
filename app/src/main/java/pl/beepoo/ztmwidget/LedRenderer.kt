@@ -74,7 +74,7 @@ object LedRenderer {
 
         val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(out)
-        c.drawColor(0xFF050505.toInt())
+        c.drawColor(0xFF000000.toInt())
         val ox = (w - cols * pitch) / 2f
         val oy = (h - ROWS * pitch) / 2f
         val b = brightness.coerceIn(20, 100) / 100f

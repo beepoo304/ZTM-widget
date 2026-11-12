@@ -27,6 +27,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Niewidoczny pośrednik dotknięć widgetu: wykrywa podwójne dotknięcie. -->
+        <activity
+            android:name=".TapActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+
         <receiver
             android:name=".BoardWidget"
             android:exported="true"

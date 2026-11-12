@@ -139,6 +139,7 @@ class ConfigActivity : ComponentActivity() {
 
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        if (intent?.getBooleanExtra(EXTRA_SETTINGS, false) == true) showSettings()
 
         lifecycleScope.launch {
             try {
@@ -458,5 +459,10 @@ class ConfigActivity : ComponentActivity() {
     override fun onDestroy() {
         web.destroy()
         super.onDestroy()
+    }
+
+    companion object {
+        /** Otwórz od razu okno ustawień (podwójne dotknięcie widgetu). */
+        const val EXTRA_SETTINGS = "pl.beepoo.ztmwidget.SETTINGS"
     }
 }
