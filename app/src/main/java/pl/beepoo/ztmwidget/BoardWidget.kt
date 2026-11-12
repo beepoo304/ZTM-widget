@@ -16,6 +16,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 class BoardWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
+        val prefs = Prefs(ctx)
+        prefs.pendingStop?.let { pending ->
+            ids.firstOrNull { prefs.stopFor(it) == null }?.let { prefs.setStop(it, pending); prefs.pendingStop = null }
+        }
         Widgets.renderAll(ctx)
         BoardService.start(ctx)
     }

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<link rel="stylesheet" href="file:///android_asset/leaflet/leaflet.css">
+<script src="file:///android_asset/leaflet/leaflet.js"></script>
+<style>
+html,body,#map{margin:0;height:100%;background:#1b1f22}
+.st{width:30px;height:30px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 1px 4px #0008;box-sizing:border-box}
+.st.t{background:#f0c94b}.st.b{background:#ff8a65}.st.sel{border-color:#2e9e55;border-width:4px}
+.cd{position:absolute;left:50%;top:-9px;transform:translateX(-50%);background:#111;color:#fff;font:bold 9px sans-serif;border-radius:6px;padding:0 3px}
+.pp b{font-size:14px}.pp .ty{color:#555;margin-top:2px}.pp .ln{color:#333;margin-top:4px;max-width:210px}
+.ob{margin-top:8px;background:#67d78a;color:#05210d;text-align:center;font-weight:700;border-radius:16px;padding:8px 12px;cursor:pointer;font-size:14px}
+.hint{position:absolute;z-index:500;left:50%;top:8px;transform:translateX(-50%);background:#000b;color:#fff;font:12px sans-serif;padding:4px 10px;border-radius:10px;display:none}
+</style></head><body><div id="map"></div><div class="hint" id="hint">Przybliż mapę, aby zobaczyć przystanki</div>
+<script>
+const m=L.map('map',{zoomControl:false}).setView([50.2599,19.0216],14);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(m);
+const layer=L.layerGroup().addTo(m);let SEL='',OPEN=null;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const TYPE={'0':['t','🚋','Tramwaj'],'3':['b','🚌','Autobus'],'11':['b','🚎','Trolejbus'],'':['b','🚏','Przystanek']};
+function icon(s){const t=TYPE[s[5]]||TYPE[''];return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-14],
+ html:'<div class="st '+t[0]+(s[1]===SEL?' sel':'')+'">'+t[1]+'<span class="cd">'+esc(s[2].replace(/[a-z]+$/i,''))+'</span></div>'});}
+function popup(s){const t=TYPE[s[5]]||TYPE[''];return '<div class="pp"><b>'+esc(s[1])+' '+esc(s[2])+'</b><div class="ty">'+t[2]+'</div>'+
+ '<div class="ln" id="ln'+s[0]+'">Linie: …</div><div class="ob" onclick="Android.observe(\''+s[0]+'\')">👁 Obserwuj</div></div>';}
+function load(){if(m.getZoom()<14){layer.clearLayers();hint.style.display='block';return;}hint.style.display='none';
+ const b=m.getBounds();let list=[];try{list=JSON.parse(Android.stopsIn(b.getSouth(),b.getWest(),b.getNorth(),b.getEast()))}catch(e){}
+ layer.clearLayers();for(const s of list){const mk=L.marker([s[3],s[4]],{icon:icon(s)}).bindPopup(popup(s),{minWidth:180});
+  mk.on('popupopen',()=>{OPEN=s[0];Android.lines(s[0]);});mk.addTo(layer);}}
+function setLines(id,txt){const e=document.getElementById('ln'+id);if(e)e.textContent=txt;}
+function focusStops(lat,lon,zoom,name){SEL=name;m.setView([lat,lon],zoom);load();}
+function fitStops(s,w,n,e,name){SEL=name;m.fitBounds([[s,w],[n,e]],{padding:[50,50],maxZoom:17});load();}
+m.on('moveend',()=>{if(!m._popup||!m._popup.isOpen())load();});
+</script></body></html>

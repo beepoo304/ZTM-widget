@@ -61,6 +61,16 @@ class Prefs(ctx: Context) {
         sp.edit().putString("w$widgetId.id", s.id).putString("w$widgetId.name", s.name).putString("w$widgetId.code", s.code).apply()
     }
 
+    /** Przystanek dla widgetu przypinanego z aplikacji (przypisywany w pierwszym onUpdate). */
+    var pendingStop: WidgetStop?
+        get() = sp.getString("pending.id", null)?.let {
+            WidgetStop(it, sp.getString("pending.name", "") ?: "", sp.getString("pending.code", "") ?: "")
+        }
+        set(v) {
+            if (v == null) sp.edit().remove("pending.id").apply()
+            else sp.edit().putString("pending.id", v.id).putString("pending.name", v.name).putString("pending.code", v.code).apply()
+        }
+
     fun remove(widgetId: Int) {
         sp.edit().remove("w$widgetId.id").remove("w$widgetId.name").remove("w$widgetId.code").apply()
     }
