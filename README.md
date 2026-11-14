@@ -17,12 +17,17 @@ Można mieć kilka widgetów z różnymi przystankami. Żeby zmienić przystanek
 - **Dotknięcie widgetu** odświeża dane od razu.
 - **Odświeżanie:** zegar i miganie co 1 s, odjazdy co 20 s. Pobiera tylko przy włączonym ekranie.
 - **Ustawienia (⚙):**
-  - kolor diod: bursztynowy, czerwony, zielony,
+  - **styl tablicy:** `REAL (LED)` (oryginalna matryca diodowa SDIP o zwiększonym kontraście) lub `MODERN (TXT)` (ostry, ultra-czytelny tekst wektorowy na czarnym tle),
+  - kolor diod / akcentu: bursztynowy, czerwony, zielony,
   - jasność,
   - wyłącznik monitorowania,
   - „tylko pon–pt”,
-  - godziny działania.
+  - godziny działania,
+  - informacja o wersji i dacie wydania.
 - **Poza harmonogramem** tablica pokazuje „MONITOROWANIE WSTRZYMANE” i nic nie pobiera. Dotknięcie włącza ją na 5 minut.
+
+## Optymalizacja baterii i audyt
+Szczegółowy opis architektury, optymalizacji baterii (redukcja 95% draw calls, GZIP, natychmiastowe budzenie ekranem) oraz trybów wyświetlania znajduje się w pliku [AUDIT_OPTIMIZATION.md](AUDIT_OPTIMIZATION.md).
 
 ## Dane
 Nieoficjalne API systemu SDIP: `sdip.transportgzm.pl`. Lista słupków jest pobierana raz na tydzień, odjazdy co 20 s.
