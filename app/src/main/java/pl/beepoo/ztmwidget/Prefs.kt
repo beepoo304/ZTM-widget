@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 class Prefs(ctx: Context) {
     private val sp = ctx.applicationContext.getSharedPreferences("ztm", Context.MODE_PRIVATE)
 
-    /** 0 bursztynowy, 1 czerwony, 2 zielony. */
+    /** 0 bursztynowy, 1 czerwony, 2 zielony, 3 różowy, 4 niebieski. */
     var color: Int
         get() = sp.getInt("color", 0)
         set(v) = sp.edit().putInt("color", v).apply()

@@ -121,7 +121,7 @@ class ConfigActivity : ComponentActivity() {
         root.addView(web, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         root.addView(TextView(this).apply {
-            text = "github.com/beepoo304/ZTM-widget · v1.0.2 (14.11.2026) · dane: SDIP ZTM"
+            text = "github.com/beepoo304/ZTM-widget · v1.0.3 (14.11.2026) · dane: SDIP ZTM"
             textSize = 10f
             setTextColor(0xFF7C8582.toInt())
             gravity = Gravity.CENTER
@@ -385,10 +385,11 @@ class ConfigActivity : ComponentActivity() {
         markStyleTiles()
         box.addView(styleTiles, wrap)
 
-        // Kolor diod / akcentu: trzy równe kafelki z próbką, wybrany obwiedziony.
+        // Kolor diod / akcentu: 5 równych kafelków z próbką, wybrany obwiedziony.
         box.addView(section("KOLOR DIOD / AKCENTU"))
         val tiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val tileViews = ArrayList<LinearLayout>()
+        var dialog: AlertDialog? = null
         fun markTiles() {
             tileViews.forEachIndexed { i, v ->
                 v.background = GradientDrawable().apply {
@@ -397,24 +398,28 @@ class ConfigActivity : ComponentActivity() {
                 }
             }
             markStyleTiles()
+            dialog?.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(LedRenderer.colorOf(prefs.color))
         }
         LedRenderer.COLOR_NAMES.forEachIndexed { i, n ->
             val tile = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(px(4), px(10), px(4), px(8))
+                setPadding(px(2), px(8), px(2), px(8))
                 addView(TextView(this@ConfigActivity).apply {
-                    text = "12:34"; textSize = 26f; gravity = Gravity.CENTER
+                    text = "12:34"; textSize = 19f; gravity = Gravity.CENTER
                     typeface = resources.getFont(R.font.micro5)
                     setTextColor(LedRenderer.colorOf(i))
-                    setShadowLayer(px(6).toFloat(), 0f, 0f, LedRenderer.colorOf(i))
+                    setShadowLayer(px(4).toFloat(), 0f, 0f, LedRenderer.colorOf(i))
                 })
-                addView(TextView(this@ConfigActivity).apply { text = n; textSize = 12f; gravity = Gravity.CENTER; setTextColor(fg) })
+                addView(TextView(this@ConfigActivity).apply {
+                    text = n; textSize = 10.5f; gravity = Gravity.CENTER; setTextColor(fg)
+                    isSingleLine = true
+                })
                 setOnClickListener { prefs.color = i; markTiles(); drawPreview(); Widgets.renderAll(this@ConfigActivity) }
             }
             tileViews += tile
             tiles.addView(tile, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                if (i > 0) marginStart = px(8)
+                if (i > 0) marginStart = px(5)
             })
         }
         markTiles()
@@ -493,7 +498,7 @@ class ConfigActivity : ComponentActivity() {
 
         box.addView(View(this).apply { setBackgroundColor(line) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(1)).apply { topMargin = px(14) })
         box.addView(TextView(this).apply {
-            text = "ZTM Widget v1.0.2 · Wydanie: 14.11.2026\ngithub.com/beepoo304/ZTM-widget"
+            text = "ZTM Widget v1.0.3 · Wydanie: 14.11.2026\ngithub.com/beepoo304/ZTM-widget"
             textSize = 12f
             setTextColor(dim)
             gravity = Gravity.CENTER
@@ -503,17 +508,18 @@ class ConfigActivity : ComponentActivity() {
             }
         }, wrap)
 
-        val dialog = AlertDialog.Builder(this)
+        dialog = AlertDialog.Builder(this)
             .setView(ScrollView(this).apply { addView(box) })
             .setPositiveButton("OK", null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(LedRenderer.colorOf(0))
-            preview.post(ticker)
-        }
-        dialog.setOnDismissListener { preview.removeCallbacks(ticker); Widgets.renderAll(this) }
-        dialog.window?.setBackgroundDrawable(GradientDrawable().apply { setColor(0xFF171A1C.toInt()); cornerRadius = px(16).toFloat() })
-        dialog.show()
+            .create().apply {
+                setOnShowListener {
+                    getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(LedRenderer.colorOf(prefs.color))
+                    preview.post(ticker)
+                }
+                setOnDismissListener { preview.removeCallbacks(ticker); Widgets.renderAll(this@ConfigActivity) }
+                window?.setBackgroundDrawable(GradientDrawable().apply { setColor(0xFF171A1C.toInt()); cornerRadius = px(16).toFloat() })
+                show()
+            }
     }
 
     override fun onDestroy() {

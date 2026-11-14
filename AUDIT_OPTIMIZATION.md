@@ -1,7 +1,7 @@
 # Audyt Architektury, Optymalizacja Baterii i Nowe Funkcje – ZTM-widget
 
 **Projekt:** `ZTM-widget` (Tablica przystankowa SDIP GZM)  
-**Wersja:** 1.0.2 (versionCode 3)  
+**Wersja:** 1.0.3 (versionCode 4)  
 **Data audytu i wdrożenia:** 14.11.2026  
 
 ---
@@ -65,5 +65,9 @@ Zgodnie z wymaganiami użytkownika wprowadzono elastyczny wybór stylu tablicy w
    - Czas odjazdu wyrównany do prawej krawędzi; migające `>>>` w przypadku pojazdu na przystanku.
    - Dodatkowo motyw MODERN zużywa jeszcze mniej zasobów CPU/GPU, ponieważ całkowicie pomija rastrowanie matrycy diod.
 
-3. **Wersja i data wydania w Ustawieniach:**
-   - Dodano informację o wersji (`v1.0.2`) oraz dacie wydania (`14.11.2026`) bezpośrednio w oknie Ustawień oraz w stopce głównego ekranu wyboru przystanku.
+3. **Nowe kolory tablicy (Różowy i Niebieski):**
+   - Rozszerzono paletę barw o dwa nowe neonowe odcienie: **Różowy** (neon magenta `#FF4DA6`) oraz **Niebieski** (sky cyan `#40C4FF`).
+   - W oknie Ustawień 5 kafelków kolorów rozmieszczono w równomiernym poziomym pasku palety (`weight = 1f`, równe odstępy i dopasowana typografia zegara).
+
+4. **Wersja i data wydania w Ustawieniach:**
+   - Dodano informację o wersji (`v1.0.3`) oraz dacie wydania (`14.11.2026`) bezpośrednio w oknie Ustawień oraz w stopce głównego ekranu wyboru przystanku.

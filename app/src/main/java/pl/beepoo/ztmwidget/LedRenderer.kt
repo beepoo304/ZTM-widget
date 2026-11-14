@@ -37,12 +37,14 @@ object LedRenderer {
 
     /** Kolory diod: rdzeń, poświata. */
     private val COLORS = arrayOf(
-        intArrayOf(0xFFFFC21A.toInt(), 0xFFFF8F00.toInt()), // bursztynowy
-        intArrayOf(0xFFFF3D2E.toInt(), 0xFFFF1A0A.toInt()), // czerwony
-        intArrayOf(0xFF7DFF6A.toInt(), 0xFF33E022.toInt()), // zielony
+        intArrayOf(0xFFFFC21A.toInt(), 0xFFFF8F00.toInt()), // 0: bursztynowy
+        intArrayOf(0xFFFF3D2E.toInt(), 0xFFFF1A0A.toInt()), // 1: czerwony
+        intArrayOf(0xFF7DFF6A.toInt(), 0xFF33E022.toInt()), // 2: zielony
+        intArrayOf(0xFFFF4DA6.toInt(), 0xFFE60073.toInt()), // 3: różowy
+        intArrayOf(0xFF40C4FF.toInt(), 0xFF008CFF.toInt()), // 4: niebieski
     )
-    val COLOR_NAMES = arrayOf("Bursztynowy", "Czerwony", "Zielony")
-    fun colorOf(i: Int): Int = COLORS[i.coerceIn(0, 2)][0]
+    val COLOR_NAMES = arrayOf("Bursztyn", "Czerwony", "Zielony", "Różowy", "Niebieski")
+    fun colorOf(i: Int): Int = COLORS[i.coerceIn(0, COLORS.lastIndex)][0]
 
     private var typeface: Typeface? = null
 
@@ -107,7 +109,7 @@ object LedRenderer {
         val ox = (w - cols * pitch) / 2f
         val oy = (h - ROWS * pitch) / 2f
         val b = brightness.coerceIn(20, 100) / 100f
-        val (core, glow) = COLORS[colorIdx.coerceIn(0, 2)].let { it[0] to it[1] }
+        val (core, glow) = COLORS[colorIdx.coerceIn(0, COLORS.lastIndex)].let { it[0] to it[1] }
 
         // Cache tła ciemnych diod – generowane raz na rozmiar/kolor zamiast 6000 drawCircle co sekundę!
         // Wyrazisty kontrast: 6% zamiast 10% – głęboka czerń i brak zlewania się z tekstem

@@ -18,7 +18,7 @@ Można mieć kilka widgetów z różnymi przystankami. Żeby zmienić przystanek
 - **Odświeżanie:** zegar i miganie co 1 s, odjazdy co 20 s. Pobiera tylko przy włączonym ekranie.
 - **Ustawienia (⚙):**
   - **styl tablicy:** `REAL (LED)` (oryginalna matryca diodowa SDIP o zwiększonym kontraście) lub `MODERN (TXT)` (ostry, ultra-czytelny tekst wektorowy na czarnym tle),
-  - kolor diod / akcentu: bursztynowy, czerwony, zielony,
+  - kolor diod / akcentu: bursztynowy, czerwony, zielony, różowy, niebieski,
   - jasność,
   - wyłącznik monitorowania,
   - „tylko pon–pt”,
