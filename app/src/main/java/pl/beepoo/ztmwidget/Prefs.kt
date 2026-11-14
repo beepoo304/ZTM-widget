@@ -14,6 +14,16 @@ class Prefs(ctx: Context) {
         get() = sp.getInt("color", 0)
         set(v) = sp.edit().putInt("color", v).apply()
 
+    /** Styl tablicy: 0 = REAL (LED matrix), 1 = MODERN (czysty wektorowy tekst na czarnym tle). */
+    var style: Int
+        get() = sp.getInt("style", STYLE_REAL)
+        set(v) = sp.edit().putInt("style", v).apply()
+
+    companion object {
+        const val STYLE_REAL = 0
+        const val STYLE_MODERN = 1
+    }
+
     /** Jasność diod 20..100 %. */
     var brightness: Int
         get() = sp.getInt("brightness", 100)

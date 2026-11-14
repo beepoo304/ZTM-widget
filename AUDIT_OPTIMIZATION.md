@@ -1,8 +1,8 @@
-# Audyt Architektury i Optymalizacja Baterii – ZTM-widget
+# Audyt Architektury, Optymalizacja Baterii i Nowe Funkcje – ZTM-widget
 
 **Projekt:** `ZTM-widget` (Tablica przystankowa SDIP GZM)  
-**Wersja:** 1.0.1 (versionCode 2)  
-**Data audytu i wdrożenia:** 2026-11-14  
+**Wersja:** 1.0.2 (versionCode 3)  
+**Data audytu i wdrożenia:** 14.11.2026  
 
 ---
 
@@ -10,8 +10,8 @@
 
 Aplikacja składa się z kompaktowego zestawu komponentów:
 - **`BoardService` (Usługa pierwszoplanowa, `specialUse`):** Pętla główna sterująca odliczaniem zegara co 1 s oraz odpytywaniem API SDIP o odjazdy na żywo co 20 s w godzinach z harmonogramu.
-- **`BoardWidget` (AppWidgetProvider):** Zarządzanie instancjami widgetów 4x2 na pulpicie.
-- **`LedRenderer`:** Generator graficzny symulujący diody LED na tablicy przystankowej.
+- **`BoardWidget` (AppWidgetProvider):** Zarządzanie instancjami widgetów na pulpicie.
+- **`LedRenderer`:** Generator graficzny symulujący diody LED oraz nowoczesny silnik wektorowy dla trybu MODERN.
 - **`Sdip`:** Klient HTTP pobierający dane HTML z portalu `sdip.transportgzm.pl`.
 
 ---
@@ -46,3 +46,24 @@ Aplikacja składa się z kompaktowego zestawu komponentów:
 - Dodano nagłówek `Accept-Encoding: gzip` oraz strumieniową dekompresję `GZIPInputStream`.
 - Skrócono timeouty sieciowe (connect: 6 s, read: 8 s) dla szybszego reagowania na niestabilne łącze.
 - Rozmiar przesyłanych pakietów HTML spadł o ok. 70%, co skróciło czas aktywności modułu radiowego telefonu.
+
+---
+
+## 4. Nowy Przełącznik Stylu: REAL (LED) vs MODERN (TXT) oraz Czytelność
+
+Zgodnie z wymaganiami użytkownika wprowadzono elastyczny wybór stylu tablicy w oknie Ustawień:
+
+1. **Ulepszony motyw REAL (LED):**
+   - Poprawiono kontrast wygaszonych diod (obniżenie jasności tła do 6% koloru bazowego) – koniec ze zlewaniem się liter z tłem.
+   - Powiększono rdzeń świecącej diody oraz wzmocniono poświatę (RadialGradient) – znaki są znacznie grubsze, jaśniejsze i lepiej widoczne z odległości.
+
+2. **Nowy motyw MODERN (TXT):**
+   - Oparty na czystym renderowaniu wektorowym Skia z pełnym antyaliasingiem.
+   - Głębokie, czyste czarne tło (`#000000`).
+   - Pogrubione numery linii w kolorze wybranego akcentu (bursztynowy, czerwony, zielony).
+   - Czytelne, ostre nazwy kierunków (`#F2F5F4`).
+   - Czas odjazdu wyrównany do prawej krawędzi; migające `>>>` w przypadku pojazdu na przystanku.
+   - Dodatkowo motyw MODERN zużywa jeszcze mniej zasobów CPU/GPU, ponieważ całkowicie pomija rastrowanie matrycy diod.
+
+3. **Wersja i data wydania w Ustawieniach:**
+   - Dodano informację o wersji (`v1.0.2`) oraz dacie wydania (`14.11.2026`) bezpośrednio w oknie Ustawień oraz w stopce głównego ekranu wyboru przystanku.

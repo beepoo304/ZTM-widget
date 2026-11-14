@@ -121,7 +121,7 @@ class ConfigActivity : ComponentActivity() {
         root.addView(web, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         root.addView(TextView(this).apply {
-            text = "github.com/beepoo304/ZTM-widget · dane: SDIP ZTM"
+            text = "github.com/beepoo304/ZTM-widget · v1.0.2 (14.11.2026) · dane: SDIP ZTM"
             textSize = 10f
             setTextColor(0xFF7C8582.toInt())
             gravity = Gravity.CENTER
@@ -333,22 +333,70 @@ class ConfigActivity : ComponentActivity() {
             val w = maxOf(preview.width, px(280))
             val t = java.time.LocalTime.now()
             preview.setImageBitmap(
-                LedRenderer.render(this, w, w * 11 / 25, Screen.Departures(demoTitle, demo, false), t, t.second % 2 == 0, prefs.color, prefs.brightness)
+                LedRenderer.render(this, w, w * 11 / 25, Screen.Departures(demoTitle, demo, false), t, t.second % 2 == 0, prefs.color, prefs.brightness, prefs.style)
             )
         }
         val ticker = object : Runnable {
             override fun run() { drawPreview(); preview.postDelayed(this, 1_000L) }
         }
 
-        // Kolor diod: trzy równe kafelki z próbką, wybrany obwiedziony.
-        box.addView(section("KOLOR DIOD"))
-        val tiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val tileViews = ArrayList<LinearLayout>()
-        fun markTiles() = tileViews.forEachIndexed { i, v ->
+        // Styl tablicy: REAL (LED) vs MODERN (TXT)
+        box.addView(section("STYL TABLICY"))
+        val styleTiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val styleViews = ArrayList<LinearLayout>()
+        val styleNames = arrayOf("REAL (LED)", "MODERN (TXT)")
+        val styleDescs = arrayOf("Diody SDIP", "Czysty tekst")
+
+        fun markStyleTiles() = styleViews.forEachIndexed { i, v ->
+            val sel = i == prefs.style
+            val c = LedRenderer.colorOf(prefs.color)
             v.background = GradientDrawable().apply {
                 setColor(Color.BLACK); cornerRadius = px(10).toFloat()
-                if (i == prefs.color) setStroke(px(2), LedRenderer.colorOf(i)) else setStroke(px(1), line)
+                if (sel) setStroke(px(2), c) else setStroke(px(1), line)
             }
+            val titleTv = v.getChildAt(0) as TextView
+            titleTv.setTextColor(if (sel) c else fg)
+        }
+
+        styleNames.forEachIndexed { i, n ->
+            val tile = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(px(4), px(10), px(4), px(8))
+                addView(TextView(this@ConfigActivity).apply {
+                    text = n; textSize = 14f; gravity = Gravity.CENTER
+                    paint.isFakeBoldText = true
+                })
+                addView(TextView(this@ConfigActivity).apply {
+                    text = styleDescs[i]; textSize = 11f; gravity = Gravity.CENTER; setTextColor(dim)
+                })
+                setOnClickListener {
+                    prefs.style = i
+                    markStyleTiles()
+                    drawPreview()
+                    Widgets.renderAll(this@ConfigActivity)
+                }
+            }
+            styleViews += tile
+            styleTiles.addView(tile, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                if (i > 0) marginStart = px(8)
+            })
+        }
+        markStyleTiles()
+        box.addView(styleTiles, wrap)
+
+        // Kolor diod / akcentu: trzy równe kafelki z próbką, wybrany obwiedziony.
+        box.addView(section("KOLOR DIOD / AKCENTU"))
+        val tiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val tileViews = ArrayList<LinearLayout>()
+        fun markTiles() {
+            tileViews.forEachIndexed { i, v ->
+                v.background = GradientDrawable().apply {
+                    setColor(Color.BLACK); cornerRadius = px(10).toFloat()
+                    if (i == prefs.color) setStroke(px(2), LedRenderer.colorOf(i)) else setStroke(px(1), line)
+                }
+            }
+            markStyleTiles()
         }
         LedRenderer.COLOR_NAMES.forEachIndexed { i, n ->
             val tile = LinearLayout(this).apply {
@@ -442,6 +490,18 @@ class ConfigActivity : ComponentActivity() {
         box.addView(hint, wrap)
         schedule += hint
         enableSchedule(prefs.monitoring)
+
+        box.addView(View(this).apply { setBackgroundColor(line) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(1)).apply { topMargin = px(14) })
+        box.addView(TextView(this).apply {
+            text = "ZTM Widget v1.0.2 · Wydanie: 14.11.2026\ngithub.com/beepoo304/ZTM-widget"
+            textSize = 12f
+            setTextColor(dim)
+            gravity = Gravity.CENTER
+            setPadding(0, px(14), 0, px(8))
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/beepoo304/ZTM-widget")))
+            }
+        }, wrap)
 
         val dialog = AlertDialog.Builder(this)
             .setView(ScrollView(this).apply { addView(box) })

@@ -86,7 +86,7 @@ object Widgets {
             val time = LocalTime.now()
             val bmp = LedRenderer.render(
                 ctx, w, h, screenFor(ctx, widgetId, System.currentTimeMillis()),
-                time, time.second % 2 == 0, prefs.color, prefs.brightness
+                time, time.second % 2 == 0, prefs.color, prefs.brightness, prefs.style
             )
             val views = RemoteViews(ctx.packageName, R.layout.widget_board)
             views.setImageViewBitmap(R.id.board, bmp)
