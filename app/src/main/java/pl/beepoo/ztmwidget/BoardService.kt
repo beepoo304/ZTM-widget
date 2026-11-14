@@ -36,7 +36,27 @@ class BoardService : Service() {
     private var loop: Job? = null
     private var lastActive: Boolean? = null
 
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_ON) {
+                // Ekran włączony: natychmiastowe obudzenie pętli, pobranie świeżych odjazdów i render!
+                loop?.cancel()
+                loop = scope.launch { runLoop() }
+            }
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        val filter = android.content.IntentFilter(Intent.ACTION_SCREEN_ON)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(screenReceiver, filter)
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!goForeground()) {
@@ -66,8 +86,9 @@ class BoardService : Service() {
     private suspend fun runLoop() {
         val power = getSystemService(PowerManager::class.java)
         while (scope.isActive) {
-            val prefs = Prefs(this)
             val now = System.currentTimeMillis()
+            val isInteractive = power?.isInteractive != false
+            val prefs = Prefs(this)
             val ids = Widgets.ids(this)
             if (ids.isEmpty() || (!prefs.monitoring && now >= prefs.manualUntil)) {
                 Widgets.renderAll(this)
@@ -84,13 +105,15 @@ class BoardService : Service() {
                 delay(15_000L)
                 continue
             }
-            if (power?.isInteractive != false) {
+            if (isInteractive) {
                 fetchDue(prefs, ids, now)
                 Widgets.renderAll(this)
                 // Następne tyknięcie tuż po granicy pełnej sekundy: zegar zmienia się równo.
                 delay(1_000L - (System.currentTimeMillis() % 1_000L) + 15L)
             } else {
-                delay(2_000L) // ekran wyłączony: bez sieci i bez rysowania
+                // Ekran wyłączony: śpimy 15 s bez zbędnych wybudzeń CPU i bez renderowania.
+                // Włączenie ekranu (ACTION_SCREEN_ON) natychmiast anuluje to uśpienie i odświeża tablicę!
+                delay(15_000L)
             }
         }
     }
@@ -136,6 +159,7 @@ class BoardService : Service() {
 
     override fun onDestroy() {
         isRunning = false
+        try { unregisterReceiver(screenReceiver) } catch (_: Exception) {}
         scope.cancel()
         super.onDestroy()
     }

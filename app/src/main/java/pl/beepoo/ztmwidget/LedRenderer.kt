@@ -56,6 +56,11 @@ object LedRenderer {
         }
     }
 
+    private var bgBitmap: Bitmap? = null
+    private var bgKey: String? = null
+    private var cachedSprite: Bitmap? = null
+    private var spriteKey: String? = null
+
     /** Rysuje całą tablicę w bitmapie o rozmiarze widgetu (piksele). */
     fun render(ctx: Context, wPx: Int, hPx: Int, screen: Screen, now: LocalTime, blink: Boolean, colorIdx: Int, brightness: Int): Bitmap {
         // Ograniczamy rozmiar bitmapy (przesyłana do launchera co sekundę).
@@ -72,25 +77,58 @@ object LedRenderer {
         dots.getPixels(px, 0, cols, 0, 0, cols, ROWS)
         dots.recycle()
 
-        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Canvas(out)
-        c.drawColor(0xFF000000.toInt())
         val ox = (w - cols * pitch) / 2f
         val oy = (h - ROWS * pitch) / 2f
         val b = brightness.coerceIn(20, 100) / 100f
         val (core, glow) = COLORS[colorIdx.coerceIn(0, 2)].let { it[0] to it[1] }
 
-        val off = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = dim(core, 0.10f) }
-        val sprite = litSprite(pitch, core, glow, b)
-        val half = sprite.width / 2f
-        val rOff = pitch * 0.36f
-        for (y in 0 until ROWS) for (x in 0 until cols) {
-            val cx = ox + (x + 0.5f) * pitch
-            val cy = oy + (y + 0.5f) * pitch
-            if (Color.alpha(px[y * cols + x]) > 127) c.drawBitmap(sprite, cx - half, cy - half, null)
-            else c.drawCircle(cx, cy, rOff, off)
+        // Cache tła ciemnych diod – generowane raz na rozmiar/kolor zamiast 6000 drawCircle co sekundę!
+        val bgK = "${w}_${h}_${cols}_${pitch}_$colorIdx"
+        var bg = bgBitmap
+        if (bg == null || bgKey != bgK || bg.isRecycled) {
+            bg?.recycle()
+            val newBg = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val bgCanvas = Canvas(newBg)
+            bgCanvas.drawColor(0xFF000000.toInt())
+            val offPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = dim(core, 0.10f) }
+            val rOff = pitch * 0.36f
+            for (y in 0 until ROWS) for (x in 0 until cols) {
+                val cx = ox + (x + 0.5f) * pitch
+                val cy = oy + (y + 0.5f) * pitch
+                bgCanvas.drawCircle(cx, cy, rOff, offPaint)
+            }
+            bg = newBg
+            bgBitmap = newBg
+            bgKey = bgK
         }
-        sprite.recycle()
+
+        // Cache świecącej diody (sprite)
+        val sKey = "${pitch}_${core}_${glow}_$b"
+        var sprite = cachedSprite
+        if (sprite == null || spriteKey != sKey || sprite.isRecycled) {
+            sprite?.recycle()
+            val newSprite = litSprite(pitch, core, glow, b)
+            sprite = newSprite
+            cachedSprite = newSprite
+            spriteKey = sKey
+        }
+
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(out)
+        c.drawBitmap(bg, 0f, 0f, null)
+
+        val half = sprite.width / 2f
+        // Rysujemy TYLKO zapalone diody (zamiast 6720 operacji – tylko kilkaset)
+        for (y in 0 until ROWS) {
+            val rowOffset = y * cols
+            val cy = oy + (y + 0.5f) * pitch - half
+            for (x in 0 until cols) {
+                if (Color.alpha(px[rowOffset + x]) > 127) {
+                    val cx = ox + (x + 0.5f) * pitch - half
+                    c.drawBitmap(sprite, cx, cy, null)
+                }
+            }
+        }
         return out
     }
 

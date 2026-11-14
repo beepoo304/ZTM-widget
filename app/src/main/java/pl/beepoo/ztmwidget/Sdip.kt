@@ -99,13 +99,19 @@ object Sdip {
 
     private fun get(url: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 10_000
-        c.readTimeout = 15_000
+        c.connectTimeout = 6_000
+        c.readTimeout = 8_000
         c.setRequestProperty("User-Agent", "ZTMWidget/1.0 (Android)")
         c.setRequestProperty("X-Requested-With", "XMLHttpRequest")
+        c.setRequestProperty("Accept-Encoding", "gzip")
         try {
             if (c.responseCode != 200) throw java.io.IOException("HTTP ${c.responseCode}")
-            return c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val stream = if ("gzip".equals(c.contentEncoding, ignoreCase = true)) {
+                java.util.zip.GZIPInputStream(c.inputStream)
+            } else {
+                c.inputStream
+            }
+            return stream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } finally {
             c.disconnect()
         }
