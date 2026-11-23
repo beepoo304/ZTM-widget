@@ -385,7 +385,7 @@ class ConfigActivity : ComponentActivity() {
         markStyleTiles()
         box.addView(styleTiles, wrap)
 
-        // Kolor diod / akcentu: 5 równych kafelków z próbką, wybrany obwiedziony.
+        // Kolor diod / akcentu: 6 równych kafelków z próbką, wybrany obwiedziony.
         box.addView(section("KOLOR DIOD / AKCENTU"))
         val tiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val tileViews = ArrayList<LinearLayout>()
@@ -404,22 +404,22 @@ class ConfigActivity : ComponentActivity() {
             val tile = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(px(2), px(8), px(2), px(8))
+                setPadding(px(1), px(8), px(1), px(8))
                 addView(TextView(this@ConfigActivity).apply {
-                    text = "12:34"; textSize = 19f; gravity = Gravity.CENTER
+                    text = "12:34"; textSize = 17f; gravity = Gravity.CENTER
                     typeface = resources.getFont(R.font.micro5)
                     setTextColor(LedRenderer.colorOf(i))
-                    setShadowLayer(px(4).toFloat(), 0f, 0f, LedRenderer.colorOf(i))
+                    setShadowLayer(px(3).toFloat(), 0f, 0f, LedRenderer.colorOf(i))
                 })
                 addView(TextView(this@ConfigActivity).apply {
-                    text = n; textSize = 10.5f; gravity = Gravity.CENTER; setTextColor(fg)
+                    text = n; textSize = 9.5f; gravity = Gravity.CENTER; setTextColor(fg)
                     isSingleLine = true
                 })
                 setOnClickListener { prefs.color = i; markTiles(); drawPreview(); Widgets.renderAll(this@ConfigActivity) }
             }
             tileViews += tile
             tiles.addView(tile, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                if (i > 0) marginStart = px(5)
+                if (i > 0) marginStart = px(4)
             })
         }
         markTiles()
@@ -498,7 +498,7 @@ class ConfigActivity : ComponentActivity() {
 
         box.addView(View(this).apply { setBackgroundColor(line) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(1)).apply { topMargin = px(14) })
         box.addView(TextView(this).apply {
-            text = "ZTM Widget v1.0.3 · Wydanie: 14.11.2026\ngithub.com/beepoo304/ZTM-widget"
+            text = "ZTM Widget v1.0.4 · Wydanie: 23.11.2026\ngithub.com/beepoo304/ZTM-widget"
             textSize = 12f
             setTextColor(dim)
             gravity = Gravity.CENTER

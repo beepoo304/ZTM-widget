@@ -42,8 +42,9 @@ object LedRenderer {
         intArrayOf(0xFF7DFF6A.toInt(), 0xFF33E022.toInt()), // 2: zielony
         intArrayOf(0xFFFF4DA6.toInt(), 0xFFE60073.toInt()), // 3: różowy
         intArrayOf(0xFF40C4FF.toInt(), 0xFF008CFF.toInt()), // 4: niebieski
+        intArrayOf(0xFFFFFFFF.toInt(), 0xFFB0C4DE.toInt()), // 5: biały (zimny LED)
     )
-    val COLOR_NAMES = arrayOf("Bursztyn", "Czerwony", "Zielony", "Różowy", "Niebieski")
+    val COLOR_NAMES = arrayOf("Bursztyn", "Czerwony", "Zielony", "Różowy", "Niebieski", "Biały")
     fun colorOf(i: Int): Int = COLORS[i.coerceIn(0, COLORS.lastIndex)][0]
 
     private var typeface: Typeface? = null
@@ -162,7 +163,7 @@ object LedRenderer {
         return out
     }
 
-    /** Nowoczesny, gładki i ultra-czytelny motyw wektorowy na czarnym tle. */
+    /** Nowoczesny, dopracowany, profesjonalny motyw wektorowy na głębokim czarnym tle. */
     private fun renderModern(
         ctx: Context,
         wPx: Int,
@@ -184,15 +185,21 @@ object LedRenderer {
         val b = brightness.coerceIn(20, 100) / 100f
         val accent = colorOf(colorIdx)
         val accentBright = withAlpha(accent, b)
-        val textPrimary = withAlpha(0xFFF2F5F4.toInt(), b)
-        val textSecondary = withAlpha(0xFF9AA29F.toInt(), b)
-        val lineSep = withAlpha(0xFF2B3032.toInt(), b)
+        val textPrimary = withAlpha(0xFFFFFFFF.toInt(), b)
+        val textSecondary = withAlpha(0xFF8E959E.toInt(), b)
+        val lineSep = withAlpha(0xFF22262A.toInt(), b)
 
-        val padX = max(w * 0.035f, 12f)
+        val padX = max(w * 0.04f, 14f)
         val padY = max(h * 0.04f, 8f)
 
+        // Nowoczesne, techniczne kroje systemowe
+        val fontHeader = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        val fontLine = Typeface.create("sans-serif-black", Typeface.NORMAL)
+        val fontDest = Typeface.create("sans-serif-condensed-medium", Typeface.NORMAL)
+        val fontTime = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+
         // Nagłówek: przystanek + zegar
-        val headerH = h * 0.19f
+        val headerH = h * 0.18f
         val headerBaseline = padY + headerH * 0.68f
 
         val title = when (screen) {
@@ -203,8 +210,9 @@ object LedRenderer {
         }
 
         val clockPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = max(headerH * 0.58f, 12f)
+            typeface = fontHeader
+            textSize = max(headerH * 0.65f, 13f)
+            letterSpacing = 0.05f
             color = accentBright
         }
         val hh = "%02d".format(now.hour)
@@ -217,8 +225,9 @@ object LedRenderer {
         }
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = max(headerH * 0.52f, 11f)
+            typeface = fontHeader
+            textSize = max(headerH * 0.55f, 12f)
+            letterSpacing = 0.06f
             color = textSecondary
         }
         c.save()
@@ -227,7 +236,7 @@ object LedRenderer {
         c.restore()
 
         val sepY = padY + headerH
-        val sepPaint = Paint().apply { color = lineSep; strokeWidth = max(1f, h * 0.008f) }
+        val sepPaint = Paint().apply { color = lineSep; strokeWidth = max(1f, h * 0.007f) }
         c.drawLine(padX, sepY, w - padX, sepY, sepPaint)
 
         // Treść
@@ -255,26 +264,30 @@ object LedRenderer {
 
                 val rowCount = if (screen.stale) 5 else max(deps.size, 4)
                 val rowH = contentH / rowCount
-                val rowTextSize = max(rowH * 0.52f, 11f)
+                val rowTextSize = max(rowH * 0.55f, 12f)
 
                 val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-                    textSize = rowTextSize * 1.05f
+                    typeface = fontLine
+                    textSize = rowTextSize * 1.08f
+                    letterSpacing = 0.02f
                     color = accentBright
                 }
                 val destPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-                    textSize = rowTextSize
+                    typeface = fontDest
+                    textSize = rowTextSize * 1.02f
+                    letterSpacing = 0.01f
                     color = textPrimary
                 }
                 val timePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                    typeface = fontTime
                     textSize = rowTextSize
+                    letterSpacing = 0.02f
                     color = accentBright
                 }
                 val timeSchedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+                    typeface = fontTime
                     textSize = rowTextSize
+                    letterSpacing = 0.02f
                     color = textSecondary
                 }
 
@@ -282,6 +295,10 @@ object LedRenderer {
                 val maxTimeW = max(timePaint.measureText("00 min"), timePaint.measureText("00:00"))
                 val destLeft = padX + maxLineW + padX * 0.5f
                 val destRight = w - padX - maxTimeW - padX * 0.4f
+                val destBoxW = destRight - destLeft
+
+                // Przewijanie bazowane na sekundach
+                val sec = now.minute * 60 + now.second
 
                 deps.forEachIndexed { i, d ->
                     val rowCenter = contentTop + (i + 0.5f) * rowH
@@ -290,10 +307,28 @@ object LedRenderer {
                     // Linia
                     c.drawText(d.line.uppercase(PL), padX, baseline, linePaint)
 
-                    // Kierunek
+                    // Kierunek z płynnym przewijaniem tekstu gdy za długi
+                    val destText = d.destination.uppercase(PL)
+                    val textW = destPaint.measureText(destText)
                     c.save()
                     c.clipRect(destLeft, contentTop + i * rowH, destRight, contentTop + (i + 1) * rowH)
-                    c.drawText(d.destination, destLeft, baseline, destPaint)
+                    if (textW <= destBoxW) {
+                        c.drawText(destText, destLeft, baseline, destPaint)
+                    } else {
+                        val overflow = textW - destBoxW
+                        val speedPxPerSec = max(12f, rowTextSize * 0.8f)
+                        val scrollDuration = (overflow / speedPxPerSec).toInt() + 1
+                        val pauseStart = 2
+                        val pauseEnd = 2
+                        val cycle = pauseStart + scrollDuration + pauseEnd
+                        val t = sec % cycle
+                        val offset = when {
+                            t < pauseStart -> 0f
+                            t < pauseStart + scrollDuration -> (t - pauseStart) * speedPxPerSec
+                            else -> overflow
+                        }
+                        c.drawText(destText, destLeft - offset, baseline, destPaint)
+                    }
                     c.restore()
 
                     // Czas
@@ -311,8 +346,9 @@ object LedRenderer {
                 if (screen.stale) {
                     val staleY = contentTop + 4.5f * rowH + rowTextSize * 0.35f
                     val stalePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                        typeface = fontHeader
                         textSize = max(rowTextSize * 0.85f, 10f)
+                        letterSpacing = 0.05f
                         color = 0xFFFF453A.toInt()
                     }
                     val stW = stalePaint.measureText("BRAK AKTUALIZACJI")
@@ -391,10 +427,34 @@ object LedRenderer {
                 val timeW = max(p.measureText("00 min"), p.measureText("00:00"))
                 val dirX = 1f + lineW + 4f
                 val timeRight = cols - 1
+                val sec = now.minute * 60 + now.second
                 deps.forEachIndexed { i, d ->
                     val row = i + 1
                     text(d.line.uppercase(PL), 1f, row)
-                    text(d.destination.uppercase(PL), dirX, row, (timeRight - timeW - 3).toInt())
+                    
+                    // Kierunek: przewijanie po diodach LED gdy za długi
+                    val destText = d.destination.uppercase(PL)
+                    val textW = p.measureText(destText)
+                    val maxW = (timeRight - timeW - 3) - dirX
+                    if (textW <= maxW) {
+                        text(destText, dirX, row, (timeRight - timeW - 3).toInt())
+                    } else {
+                        val overflow = textW - maxW
+                        // Prędkość w pikselach/diodach na sekundę
+                        val speed = 2f
+                        val scrollDuration = (overflow / speed).toInt() + 1
+                        val pauseStart = 2
+                        val pauseEnd = 2
+                        val cycle = pauseStart + scrollDuration + pauseEnd
+                        val t = sec % cycle
+                        val offset = when {
+                            t < pauseStart -> 0f
+                            t < pauseStart + scrollDuration -> (t - pauseStart) * speed
+                            else -> overflow
+                        }
+                        text(destText, dirX - offset, row, (timeRight - timeW - 3).toInt())
+                    }
+
                     if (d.atStop) { if (blink) textRight(">>>", timeRight, row) }
                     else textRight(d.time, timeRight, row)
                 }
