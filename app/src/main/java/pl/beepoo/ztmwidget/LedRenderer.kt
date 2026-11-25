@@ -52,8 +52,8 @@ object LedRenderer {
     /** Przewijanie za długich napisów: diody (REAL) lub dp-ish piksele (MODERN) na sekundę, pauza na starcie. */
     const val SCROLL_DOTS_PER_S = 10f
     private const val SCROLL_PAUSE_MS = 2_000L
-    /** MODERN: ok. 4–5 px na klatkę zamiast 8 – gładki tekst nie szarpie. */
-    private const val MODERN_DOTS_PER_S = 5.5f
+    /** MODERN: jak długo widać jeden kawałek długiej nazwy. */
+    private const val PAGE_MS = 3_000L
 
     /** Czy ostatnio narysowana tablica ma przewijany napis (usługa rysuje wtedy częściej). */
     @Volatile var scrolling = false
@@ -358,22 +358,32 @@ object LedRenderer {
     }
 
     /**
-     * Napis w polu [left, left+boxW] (clip ustawia wołający); za długi – przewija się płynnie.
-     * Wolniej niż REAL (mniejsze skoki między klatkami), a brzegi wygaszone zamiast ostrego cięcia.
+     * Napis w polu [left, left+boxW] (clip ustawia wołający). Za długi pokazujemy na zmianę
+     * kawałkami co [PAGE_MS], zaczynając zawsze od słowa – gładki tekst przy 10 klatkach/s szarpie,
+     * a zmiana co kilka sekund wygląda czysto na każdym telefonie (i wystarcza rysowanie co 1 s).
+     * Brzeg, za którym jest ciąg dalszy, jest wygaszony.
      */
-    private fun drawScrolling(c: Canvas, s: String, left: Float, boxW: Float, baseline: Float, p: Paint, dot: Float) {
+    private fun drawScrolling(c: Canvas, s: String, left: Float, boxW: Float, baseline: Float, p: Paint, @Suppress("UNUSED_PARAMETER") dot: Float) {
         val tw = p.measureText(s)
-        val gap = max(boxW * 0.35f, p.textSize * 2f)
-        val off = scrollOffset(tw, boxW, gap, MODERN_DOTS_PER_S * dot)
+        if (tw <= boxW || boxW < p.textSize) { c.drawText(s, left, baseline, p); return }
+        // Początki słów (x w pikselach) – kawałek zaczyna się od ostatniego słowa, które jeszcze się mieści.
+        val starts = listOf(0f) + s.indices.filter { s[it] == ' ' && it + 1 < s.length }.map { p.measureText(s, 0, it + 1) }
+        val offs = mutableListOf(0f)
+        while (offs.last() + boxW < tw) {
+            val cur = offs.last()
+            val next = starts.lastOrNull { it > cur && it <= cur + boxW * 0.9f } ?: (cur + boxW * 0.85f)
+            offs += min(next, tw - boxW + p.textSize * 0.3f)
+        }
+        val off = offs[((animMs / PAGE_MS) % offs.size).toInt()]
         c.drawText(s, left - off, baseline, p)
-        if (tw <= boxW) return
-        c.drawText(s, left - off + tw + gap, baseline, p)
         val fade = min(p.textSize * 0.9f, boxW * 0.15f)
         val top = baseline - p.textSize * 1.2f
         val bottom = baseline + p.textSize * 0.4f
         val fp = Paint()
-        fp.shader = LinearGradient(left + boxW - fade, 0f, left + boxW, 0f, 0x00000000, 0xFF000000.toInt(), Shader.TileMode.CLAMP)
-        c.drawRect(left + boxW - fade, top, left + boxW, bottom, fp)
+        if (off + boxW < tw) {
+            fp.shader = LinearGradient(left + boxW - fade, 0f, left + boxW, 0f, 0x00000000, 0xFF000000.toInt(), Shader.TileMode.CLAMP)
+            c.drawRect(left + boxW - fade, top, left + boxW, bottom, fp)
+        }
         if (off > 0f) {
             fp.shader = LinearGradient(left, 0f, left + fade, 0f, 0xFF000000.toInt(), 0x00000000, Shader.TileMode.CLAMP)
             c.drawRect(left, top, left + fade, bottom, fp)
