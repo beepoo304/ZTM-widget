@@ -1,7 +1,8 @@
 # Przystanek ZTM – widget tablicy przystankowej
 
 Widget 4×2 na Androida, który wygląda jak tablica SDIP na przystanku ZTM (GZM): świecące diody LED na czarnym tle.
-Pokazuje odjazdy na żywo: linia, kierunek, czas. Pojazd na przystanku to migające `>>>`.
+Pokazuje 6 najbliższych odjazdów na żywo: linia, kierunek, czas – tak jak tablica na przystanku.
+Pojazd stojący na przystanku to migające `>>>`; czasy w minutach są zaokrąglane w górę jak na tablicy (nigdy „0 min”).
 
 ## Instalacja
 Najnowsze APK: **Releases → ZTMWidget.apk**.

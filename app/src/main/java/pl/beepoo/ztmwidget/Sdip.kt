@@ -63,13 +63,18 @@ object Sdip {
         RegexOption.DOT_MATCHES_ALL
     )
 
+    private val MIN = Regex("(\\d+)\\s*min")
+
     private fun input(html: String, id: String): String =
         Regex("id='$id'[^>]*value='([^']*)'").find(html)?.groupValues?.get(1)?.let(::unescape) ?: ""
 
     /**
      * Parsuje fragment HTML z `action=sd`. Bierzemy tylko zakładkę „Następne odjazdy”
      * (`stop-departures-…`); druga zakładka powtarza te same kursy pogrupowane wg linii.
-     * Status 2 = pojazd na przystanku, 0/1 = czas z GPS ("X min"), 8 = z rozkładu ("HH:MM").
+     * Status 1 = pojazd na przystanku (serwer sam wysyła ">>>"), 0 = czas z GPS ("X min"),
+     * 2 = "0 min" (odjazd w tej minucie), 8 = z rozkładu ("HH:MM").
+     * API zaokrągla minuty w dół, a tablica na przystanku w górę i nigdy nie pokazuje "0 min" –
+     * dlatego "X min" zamieniamy na "X+1 min", a ">>>" tylko przy statusie 1.
      */
     fun parseBoard(html: String, now: Long): Board {
         val start = html.indexOf("id='stop-departures-").let { if (it < 0) 0 else it }
@@ -77,12 +82,13 @@ object Sdip {
         val block = html.substring(start, end)
         val deps = ROW.findAll(block).map { m ->
             val status = m.groupValues[1].toIntOrNull() ?: 0
-            val time = unescape(m.groupValues[4]).trim()
+            val raw = unescape(m.groupValues[4]).trim()
+            val min = MIN.matchEntire(raw)?.groupValues?.get(1)?.toIntOrNull()
             Departure(
                 line = unescape(m.groupValues[2]).trim(),
                 destination = unescape(m.groupValues[3]).trim(),
-                time = time,
-                atStop = status == 2 || time == "0 min" || time.startsWith("<"),
+                time = if (min != null) "${min + 1} min" else raw,
+                atStop = status == 1 || raw.startsWith(">"),
                 realtime = status != 8,
             )
         }.toList()

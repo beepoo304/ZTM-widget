@@ -29,10 +29,10 @@ sealed class Screen {
  * a potem każda dioda jako kropka: świecąca z poświatą albo ciemna „nieświecąca”.
  */
 object LedRenderer {
-    const val ROWS = 56
+    const val ROWS = 65
     private const val MIN_COLS = 110
     private const val ROW_H = 9
-    private val ROW_TOP = intArrayOf(1, 11, 20, 29, 38, 47)
+    private val ROW_TOP = intArrayOf(1, 11, 20, 29, 38, 47, 56)
     private val PL = Locale("pl", "PL")
 
     /** Kolory diod: rdzeń, poświata. */
@@ -181,19 +181,23 @@ object LedRenderer {
         val c = Canvas(out)
         c.drawColor(0xFF000000.toInt())
 
+        // Kroje systemowe: wąski pogrubiony na kierunki (więcej liter w wierszu), ciężki na linie i czasy.
+        val condensed = Typeface.create("sans-serif-condensed", Typeface.BOLD)
+        val heavy = Typeface.create("sans-serif-black", Typeface.NORMAL)
+
         val b = brightness.coerceIn(20, 100) / 100f
         val accent = colorOf(colorIdx)
         val accentBright = withAlpha(accent, b)
-        val textPrimary = withAlpha(0xFFF2F5F4.toInt(), b)
-        val textSecondary = withAlpha(0xFF9AA29F.toInt(), b)
+        val textPrimary = withAlpha(0xFFFFFFFF.toInt(), b)
+        val textSecondary = withAlpha(0xFFC4CACC.toInt(), b)
         val lineSep = withAlpha(0xFF2B3032.toInt(), b)
 
-        val padX = max(w * 0.035f, 12f)
-        val padY = max(h * 0.04f, 8f)
+        val padX = max(w * 0.03f, 10f)
+        val padY = max(h * 0.03f, 6f)
 
         // Nagłówek: przystanek + zegar
-        val headerH = h * 0.19f
-        val headerBaseline = padY + headerH * 0.68f
+        val headerH = h * 0.16f
+        val headerBaseline = padY + headerH * 0.75f
 
         val title = when (screen) {
             Screen.NoStop -> "PRZYSTANEK ZTM"
@@ -203,8 +207,8 @@ object LedRenderer {
         }
 
         val clockPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = max(headerH * 0.58f, 12f)
+            typeface = heavy
+            textSize = max(headerH * 0.8f, 12f)
             color = accentBright
         }
         val hh = "%02d".format(now.hour)
@@ -217,8 +221,8 @@ object LedRenderer {
         }
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = max(headerH * 0.52f, 11f)
+            typeface = condensed
+            textSize = max(headerH * 0.72f, 11f)
             color = textSecondary
         }
         c.save()
@@ -247,45 +251,45 @@ object LedRenderer {
                 drawCenteredMessage(c, screen.text.uppercase(PL), w / 2f, contentTop + contentH * 0.5f, accentBright, max(contentH * 0.16f, 12f))
             }
             is Screen.Departures -> {
-                val deps = screen.board.departures.take(if (screen.stale) 4 else 5)
+                val deps = screen.board.departures.take(if (screen.stale) 5 else 6)
                 if (deps.isEmpty()) {
                     drawCenteredMessage(c, "BRAK ODJAZDÓW", w / 2f, contentTop + contentH * 0.5f, textSecondary, max(contentH * 0.16f, 12f))
                     return out
                 }
 
-                val rowCount = if (screen.stale) 5 else max(deps.size, 4)
+                val rowCount = if (screen.stale) 6 else max(deps.size, 5)
                 val rowH = contentH / rowCount
-                val rowTextSize = max(rowH * 0.52f, 11f)
+                val rowTextSize = max(rowH * 0.74f, 11f)
 
                 val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-                    textSize = rowTextSize * 1.05f
+                    typeface = heavy
+                    textSize = rowTextSize
                     color = accentBright
                 }
                 val destPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+                    typeface = condensed
                     textSize = rowTextSize
                     color = textPrimary
                 }
                 val timePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                    typeface = heavy
                     textSize = rowTextSize
                     color = accentBright
                 }
                 val timeSchedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+                    typeface = condensed
                     textSize = rowTextSize
                     color = textSecondary
                 }
 
                 val maxLineW = max(linePaint.measureText("000"), deps.maxOf { linePaint.measureText(it.line.uppercase(PL)) })
                 val maxTimeW = max(timePaint.measureText("00 min"), timePaint.measureText("00:00"))
-                val destLeft = padX + maxLineW + padX * 0.5f
+                val destLeft = padX + maxLineW + padX * 0.6f
                 val destRight = w - padX - maxTimeW - padX * 0.4f
 
                 deps.forEachIndexed { i, d ->
                     val rowCenter = contentTop + (i + 0.5f) * rowH
-                    val baseline = rowCenter + rowTextSize * 0.35f
+                    val baseline = rowCenter + rowTextSize * 0.36f
 
                     // Linia
                     c.drawText(d.line.uppercase(PL), padX, baseline, linePaint)
@@ -309,7 +313,7 @@ object LedRenderer {
                 }
 
                 if (screen.stale) {
-                    val staleY = contentTop + 4.5f * rowH + rowTextSize * 0.35f
+                    val staleY = contentTop + 5.5f * rowH + rowTextSize * 0.35f
                     val stalePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                         typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                         textSize = max(rowTextSize * 0.85f, 10f)
@@ -326,7 +330,7 @@ object LedRenderer {
 
     private fun drawCenteredMessage(c: Canvas, text: String, cx: Float, cy: Float, color: Int, size: Float) {
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
             textSize = size
             this.color = color
         }
@@ -382,10 +386,10 @@ object LedRenderer {
 
         when (screen) {
             Screen.NoStop -> { center("DOTKNIJ, ABY", 2); center("WYBRAĆ PRZYSTANEK", 3) }
-            is Screen.Paused -> { center("MONITOROWANIE", 2); center("WSTRZYMANE", 3); center("DOTKNIJ = 5 MIN", 5) }
+            is Screen.Paused -> { center("MONITOROWANIE", 2); center("WSTRZYMANE", 3); center("DOTKNIJ = 5 MIN", 6) }
             is Screen.Message -> center(screen.text.uppercase(PL), 3)
             is Screen.Departures -> {
-                val deps = screen.board.departures.take(if (screen.stale) 4 else 5)
+                val deps = screen.board.departures.take(if (screen.stale) 5 else 6)
                 if (deps.isEmpty()) { center("BRAK ODJAZDÓW", 3); return }
                 val lineW = max(p.measureText("000"), deps.maxOf { p.measureText(it.line.uppercase(PL)) })
                 val timeW = max(p.measureText("00 min"), p.measureText("00:00"))
@@ -398,7 +402,7 @@ object LedRenderer {
                     if (d.atStop) { if (blink) textRight(">>>", timeRight, row) }
                     else textRight(d.time, timeRight, row)
                 }
-                if (screen.stale) center("BRAK AKTUALIZACJI", 5)
+                if (screen.stale) center("BRAK AKTUALIZACJI", 6)
             }
         }
     }

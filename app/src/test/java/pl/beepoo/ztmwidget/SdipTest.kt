@@ -16,7 +16,7 @@ class SdipTest {
         assertEquals("01t", b.code)
         // Tylko zakładka „Następne odjazdy”, bez powtórzeń z zakładki „wg linii”.
         assertEquals(213, b.departures.size)
-        assertEquals(Departure("T7", "Bytom Szkoła Medyczna", "2 min", atStop = false, realtime = true), b.departures[0])
+        assertEquals(Departure("T7", "Bytom Szkoła Medyczna", "3 min", atStop = false, realtime = true), b.departures[0])
         assertEquals("T16", b.departures.last().line)
         assertEquals("23:32", b.departures.last().time)
     }
@@ -28,6 +28,8 @@ class SdipTest {
             <div id='stop-departures-1' class='stop-departures'>
             <div id='9' class='departure status-2'><div class='vehicle-icon linetype-3'></div><div class='line'>910</div>
               <div class='destination' title='Katowice Dworzec'>Katowice Dworzec</div><div class='time'>0 min</div></div>
+            <div id='10' class='departure status-1'><div class='vehicle-icon linetype-3'></div><div class='line'>30</div>
+              <div class='destination' title='Giszowiec'>Giszowiec</div><div class='time'>&gt;&gt;&gt;</div></div>
             <div id='8' class='departure status-8'><div class='vehicle-icon linetype-3'></div><div class='line'>6</div>
               <div class='destination' title='X'>Plac &quot;Wolności&quot;</div><div class='time'>14:42</div></div>
             </div>
@@ -35,11 +37,15 @@ class SdipTest {
         """.trimIndent()
         val b = Sdip.parseBoard(html, 5L)
         assertEquals("A & B", b.name)
-        assertEquals(2, b.departures.size)
-        assertTrue(b.departures[0].atStop)
-        assertFalse(b.departures[1].atStop)
-        assertFalse(b.departures[1].realtime)
-        assertEquals("Plac \"Wolności\"", b.departures[1].destination)
+        assertEquals(3, b.departures.size)
+        // "0 min" (status 2) to na przystanku jeszcze "1 min", a nie ">>>".
+        assertFalse(b.departures[0].atStop)
+        assertEquals("1 min", b.departures[0].time)
+        assertTrue(b.departures[1].atStop)
+        assertFalse(b.departures[2].atStop)
+        assertFalse(b.departures[2].realtime)
+        assertEquals("14:42", b.departures[2].time)
+        assertEquals("Plac \"Wolności\"", b.departures[2].destination)
     }
 
     @Test
