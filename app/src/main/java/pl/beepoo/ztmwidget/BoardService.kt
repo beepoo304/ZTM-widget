@@ -64,14 +64,19 @@ class BoardService : Service() {
             return START_NOT_STICKY
         }
         isRunning = true
-        if (intent?.action == ACTION_TAP) onTap(intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
+        val tapped = intent?.action == ACTION_TAP
+        if (tapped) onTap(intent!!.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
         val prefs = Prefs(this)
         if (Widgets.ids(this).isEmpty() || (!prefs.monitoring && System.currentTimeMillis() >= prefs.manualUntil)) {
             Widgets.renderAll(this)
             stopSelf()
             return START_NOT_STICKY
         }
-        if (loop?.isActive != true) loop = scope.launch { runLoop() }
+        // Dotknięcie budzi pętlę od razu (nawet gdy śpi 15 s), żeby pobrać odjazdy bez czekania.
+        if (tapped || loop?.isActive != true) {
+            loop?.cancel()
+            loop = scope.launch { runLoop() }
+        }
         return START_STICKY
     }
 
@@ -80,7 +85,12 @@ class BoardService : Service() {
         val prefs = Prefs(this)
         val now = System.currentTimeMillis()
         if (!prefs.inSchedule()) prefs.manualUntil = now + MANUAL_MS
-        prefs.stopFor(widgetId)?.let { Widgets.states.getOrPut(it.id) { StopState() }.lastAttempt = 0L }
+        prefs.stopFor(widgetId)?.let {
+            val st = Widgets.states.getOrPut(it.id) { StopState() }
+            st.lastAttempt = 0L
+            st.refreshing = true
+        }
+        Widgets.renderAll(this)
     }
 
     private suspend fun runLoop() {
@@ -136,6 +146,8 @@ class BoardService : Service() {
                     st.lastAttempt = System.currentTimeMillis() - FETCH_MS + RETRY_MS
                 } finally {
                     st.loading = false
+                    st.refreshing = false
+                    Widgets.renderAll(this@BoardService)
                 }
             }
         }

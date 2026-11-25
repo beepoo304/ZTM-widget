@@ -51,6 +51,8 @@ class StopState {
     @Volatile var lastAttempt = 0L
     @Volatile var failed = false
     @Volatile var loading = false
+    /** Po dotknięciu, do końca pobierania: w nagłówku „ODŚWIEŻANIE…”. */
+    @Volatile var refreshing = false
 }
 
 object Widgets {
@@ -73,7 +75,9 @@ object Widgets {
         val st = states[stop.id]
         val board = st?.board
         return when {
-            board != null -> Screen.Departures(stop.title, board, now - board.fetchedAt > STALE_MS)
+            board != null -> Screen.Departures(
+                if (st?.refreshing == true) "ODŚWIEŻANIE…" else stop.title, board, now - board.fetchedAt > STALE_MS
+            )
             st != null && st.failed && !st.loading -> Screen.Message(stop.title, "BRAK POŁĄCZENIA")
             else -> Screen.Message(stop.title, "ŁADOWANIE…")
         }
