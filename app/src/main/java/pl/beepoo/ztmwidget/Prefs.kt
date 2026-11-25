@@ -84,6 +84,11 @@ class Prefs(ctx: Context) {
     fun remove(widgetId: Int) {
         sp.edit().remove("w$widgetId.id").remove("w$widgetId.name").remove("w$widgetId.code").apply()
     }
+
+    /** Widgety usunięte w aplikacji – Android nie da ich zdjąć z ekranu, więc tylko chowamy je z listy. */
+    var hidden: Set<Int>
+        get() = sp.getStringSet("hidden", emptySet())!!.mapNotNull { it.toIntOrNull() }.toSet()
+        set(v) { sp.edit().putStringSet("hidden", v.map { it.toString() }.toSet()).apply() }
 }
 
 data class WidgetStop(val id: String, val name: String, val code: String) {

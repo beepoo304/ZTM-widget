@@ -259,7 +259,7 @@ class ConfigActivity : ComponentActivity() {
             return
         }
         // Otwarte z ikonki aplikacji: wybierz widget albo dodaj nowy.
-        val ids = Widgets.ids(this)
+        val ids = Widgets.ids(this).filter { it !in prefs.hidden }.toIntArray()
         val labels = ids.map { prefs.stopFor(it)?.title ?: "(pusty widget)" } + "➕ Nowy widget na ekranie głównym" +
             (if (ids.isNotEmpty()) listOf("🗑 Usuń widget…") else emptyList())
         AlertDialog.Builder(this)
@@ -284,10 +284,11 @@ class ConfigActivity : ComponentActivity() {
             .setTitle("Który widget usunąć?")
             .setItems(labels.toTypedArray()) { _, i ->
                 prefs.remove(ids[i])
+                prefs.hidden = prefs.hidden + ids[i]
                 Widgets.render(this, AppWidgetManager.getInstance(this), ids[i])
                 AlertDialog.Builder(this)
                     .setTitle("Widget odpięty")
-                    .setMessage("„${labels[i]}” nie pobiera już odjazdów.\n\nŻeby zdjąć go z ekranu głównego: przytrzymaj widget i wybierz „Usuń” (albo przeciągnij go na „Usuń”).")
+                    .setMessage("„${labels[i]}” zniknął z listy i nie pobiera już odjazdów.\n\nŻeby zdjąć go z ekranu głównego: przytrzymaj widget i wybierz „Usuń” (albo przeciągnij go na „Usuń”).")
                     .setPositiveButton("OK", null)
                     .show()
             }
@@ -297,6 +298,7 @@ class ConfigActivity : ComponentActivity() {
 
     private fun assign(id: Int, ws: WidgetStop) {
         prefs.setStop(id, ws)
+        prefs.hidden = prefs.hidden - id
         Widgets.states.getOrPut(ws.id) { StopState() }.lastAttempt = 0L
         Widgets.render(this, AppWidgetManager.getInstance(this), id)
         BoardService.start(this)
