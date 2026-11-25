@@ -232,8 +232,10 @@ class ConfigActivity : ComponentActivity() {
         fun lines(id: String) {
             lifecycleScope.launch {
                 val txt = try {
-                    val b = withContext(Dispatchers.IO) { Sdip.fetchBoard(id) }
-                    val ls = b.departures.map { it.line }.distinct()
+                    // Pełna lista z rozkładów; gdy słupka tam nie ma – linie z najbliższych odjazdów.
+                    val all = stops.firstOrNull { it.id == id }
+                        ?.let { s -> withContext(Dispatchers.IO) { runCatching { Rj.lines(s) }.getOrNull() } }
+                    val ls = (all ?: withContext(Dispatchers.IO) { Sdip.fetchBoard(id) }.departures.map { it.line }.distinct())
                         .sortedWith(compareBy({ it.filter(Char::isDigit).toIntOrNull() ?: 9999 }, { it }))
                     if (ls.isEmpty()) "Linie: brak odjazdów" else "Linie: " + ls.joinToString(" · ")
                 } catch (e: Exception) {
