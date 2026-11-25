@@ -9,7 +9,7 @@ android {
         applicationId = "pl.beepoo.ztmwidget"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
+        versionCode = 12
         versionName = "1.0.6"
     }
     // Stały klucz (w repo), żeby każde APK z GitHub Actions instalowało się jako aktualizacja poprzedniego.

@@ -121,7 +121,7 @@ class ConfigActivity : ComponentActivity() {
         root.addView(web, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         root.addView(TextView(this).apply {
-            text = "github.com/beepoo304/ZTM-widget · v1.0.5 (25.11.2026) · dane: SDIP ZTM"
+            text = "github.com/beepoo304/ZTM-widget · v$appVersion · dane: SDIP ZTM"
             textSize = 10f
             setTextColor(0xFF7C8582.toInt())
             gravity = Gravity.CENTER
@@ -251,6 +251,10 @@ class ConfigActivity : ComponentActivity() {
             runOnUiThread { observeStop(id) }
         }
     }
+
+    /** Wersja z build.gradle – bez ręcznego wpisywania w tekstach. */
+    private val appVersion: String
+        get() = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "?"
 
     /** Poprzednia awaria (zapisana przez [App]) – do skopiowania i wysłania. */
     private fun showLastCrash() {
@@ -550,7 +554,7 @@ class ConfigActivity : ComponentActivity() {
 
         box.addView(View(this).apply { setBackgroundColor(line) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(1)).apply { topMargin = px(14) })
         box.addView(TextView(this).apply {
-            text = "ZTM Widget v1.0.5 · Wydanie: 25.11.2026\ngithub.com/beepoo304/ZTM-widget"
+            text = "ZTM Widget v$appVersion\ngithub.com/beepoo304/ZTM-widget"
             textSize = 12f
             setTextColor(dim)
             gravity = Gravity.CENTER
