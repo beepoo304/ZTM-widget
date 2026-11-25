@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Rect
@@ -51,6 +52,8 @@ object LedRenderer {
     /** Przewijanie za długich napisów: diody (REAL) lub dp-ish piksele (MODERN) na sekundę, pauza na starcie. */
     const val SCROLL_DOTS_PER_S = 10f
     private const val SCROLL_PAUSE_MS = 2_000L
+    /** MODERN: ok. 4–5 px na klatkę zamiast 8 – gładki tekst nie szarpie. */
+    private const val MODERN_DOTS_PER_S = 5.5f
 
     /** Czy ostatnio narysowana tablica ma przewijany napis (usługa rysuje wtedy częściej). */
     @Volatile var scrolling = false
@@ -354,13 +357,27 @@ object LedRenderer {
         return out
     }
 
-    /** Napis w polu [left, left+boxW] (clip ustawia wołający); za długi – przewija się płynnie. */
+    /**
+     * Napis w polu [left, left+boxW] (clip ustawia wołający); za długi – przewija się płynnie.
+     * Wolniej niż REAL (mniejsze skoki między klatkami), a brzegi wygaszone zamiast ostrego cięcia.
+     */
     private fun drawScrolling(c: Canvas, s: String, left: Float, boxW: Float, baseline: Float, p: Paint, dot: Float) {
         val tw = p.measureText(s)
         val gap = max(boxW * 0.35f, p.textSize * 2f)
-        val off = scrollOffset(tw, boxW, gap, SCROLL_DOTS_PER_S * dot)
+        val off = scrollOffset(tw, boxW, gap, MODERN_DOTS_PER_S * dot)
         c.drawText(s, left - off, baseline, p)
-        if (off > 0f) c.drawText(s, left - off + tw + gap, baseline, p)
+        if (tw <= boxW) return
+        c.drawText(s, left - off + tw + gap, baseline, p)
+        val fade = min(p.textSize * 0.9f, boxW * 0.15f)
+        val top = baseline - p.textSize * 1.2f
+        val bottom = baseline + p.textSize * 0.4f
+        val fp = Paint()
+        fp.shader = LinearGradient(left + boxW - fade, 0f, left + boxW, 0f, 0x00000000, 0xFF000000.toInt(), Shader.TileMode.CLAMP)
+        c.drawRect(left + boxW - fade, top, left + boxW, bottom, fp)
+        if (off > 0f) {
+            fp.shader = LinearGradient(left, 0f, left + fade, 0f, 0xFF000000.toInt(), 0x00000000, Shader.TileMode.CLAMP)
+            c.drawRect(left, top, left + fade, bottom, fp)
+        }
     }
 
     private fun drawCenteredMessage(c: Canvas, text: String, cx: Float, cy: Float, color: Int, size: Float) {
