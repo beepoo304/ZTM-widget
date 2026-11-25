@@ -88,7 +88,12 @@ object LedRenderer {
     private var cachedSprite: Bitmap? = null
     private var spriteKey: String? = null
 
-    /** Rysuje całą tablicę w bitmapie o rozmiarze widgetu (piksele). */
+    /**
+     * Rysuje całą tablicę w bitmapie o rozmiarze widgetu (piksele).
+     * Synchronizowane: podgląd (wątek UI) i widget (usługa) dzielą cache bitmap – bez tego jeden
+     * wątek zwalniał (recycle) tło, którym drugi właśnie rysował, i aplikacja się wywalała.
+     */
+    @Synchronized
     fun render(
         ctx: Context,
         wPx: Int,
