@@ -131,6 +131,7 @@ class ConfigActivity : ComponentActivity() {
             }
         })
         setContentView(root)
+        showLastCrash()
 
         web.webViewClient = object : android.webkit.WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) = centerOnCurrent()
@@ -249,6 +250,25 @@ class ConfigActivity : ComponentActivity() {
         fun observe(id: String) {
             runOnUiThread { observeStop(id) }
         }
+    }
+
+    /** Poprzednia awaria (zapisana przez [App]) – do skopiowania i wysłania. */
+    private fun showLastCrash() {
+        val f = App.crashFile(this)
+        if (!f.exists()) return
+        val txt = runCatching { f.readText() }.getOrDefault("")
+        f.delete()
+        if (txt.isBlank()) return
+        AlertDialog.Builder(this)
+            .setTitle("Aplikacja się wcześniej wywaliła")
+            .setMessage(txt.take(3_000))
+            .setPositiveButton("Kopiuj") { _, _ ->
+                (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                    .setPrimaryClip(android.content.ClipData.newPlainText("ZTM crash", txt))
+                Toast.makeText(this, "Skopiowane – wklej w czacie", Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Zamknij", null)
+            .show()
     }
 
     private fun observeStop(id: String) {
