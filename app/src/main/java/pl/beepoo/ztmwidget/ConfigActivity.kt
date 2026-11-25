@@ -260,15 +260,38 @@ class ConfigActivity : ComponentActivity() {
         }
         // Otwarte z ikonki aplikacji: wybierz widget albo dodaj nowy.
         val ids = Widgets.ids(this)
-        val labels = ids.map { prefs.stopFor(it)?.title ?: "(pusty widget)" } + "➕ Nowy widget na ekranie głównym"
+        val labels = ids.map { prefs.stopFor(it)?.title ?: "(pusty widget)" } + "➕ Nowy widget na ekranie głównym" +
+            (if (ids.isNotEmpty()) listOf("🗑 Usuń widget…") else emptyList())
         AlertDialog.Builder(this)
             .setTitle("Pokaż ${ws.title} na:")
             .setItems(labels.toTypedArray()) { _, i ->
-                if (i < ids.size) {
-                    assign(ids[i], ws)
-                    finish()
-                } else pinNew(ws)
+                when {
+                    i < ids.size -> { assign(ids[i], ws); finish() }
+                    i == ids.size -> pinNew(ws)
+                    else -> removeWidget(ids)
+                }
             }
+            .show()
+    }
+
+    /**
+     * Android nie pozwala aplikacji zdjąć widgetu z ekranu głównego – robi to tylko launcher.
+     * Odpinamy więc przystanek (widget przestaje pobierać dane) i podpowiadamy, jak go zdjąć.
+     */
+    private fun removeWidget(ids: IntArray) {
+        val labels = ids.map { prefs.stopFor(it)?.title ?: "(pusty widget)" }
+        AlertDialog.Builder(this)
+            .setTitle("Który widget usunąć?")
+            .setItems(labels.toTypedArray()) { _, i ->
+                prefs.remove(ids[i])
+                Widgets.render(this, AppWidgetManager.getInstance(this), ids[i])
+                AlertDialog.Builder(this)
+                    .setTitle("Widget odpięty")
+                    .setMessage("„${labels[i]}” nie pobiera już odjazdów.\n\nŻeby zdjąć go z ekranu głównego: przytrzymaj widget i wybierz „Usuń” (albo przeciągnij go na „Usuń”).")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+            .setNegativeButton("Anuluj", null)
             .show()
     }
 
@@ -323,7 +346,8 @@ class ConfigActivity : ComponentActivity() {
         val demo = Board(
             "", "", "", listOf(
                 Departure("T7", "Bytom Szkoła Medyczna", "2 min", atStop = false, realtime = true),
-                Departure("T13", "Siemianowice Śląskie", "0 min", atStop = true, realtime = true),
+                Departure("T6", "Chorzów Stadion Śląski Pętla Zach.", "3 min", atStop = false, realtime = true),
+                Departure("T13", "Siemianowice Śląskie", ">>>", atStop = true, realtime = true),
                 Departure("910", "Katowice Dworzec", "6 min", atStop = false, realtime = true),
                 Departure("T6", "Stroszek Zajezdnia", "11 min", atStop = false, realtime = true),
                 Departure("T16", "Wełnowiec Plac Alfreda", "14:52", atStop = false, realtime = false),
@@ -333,11 +357,15 @@ class ConfigActivity : ComponentActivity() {
             val w = maxOf(preview.width, px(280))
             val t = java.time.LocalTime.now()
             preview.setImageBitmap(
-                LedRenderer.render(this, w, w * 11 / 25, Screen.Departures(demoTitle, demo, false), t, t.second % 2 == 0, prefs.color, prefs.brightness, prefs.style)
+                LedRenderer.render(this, w, w * 11 / 25, Screen.Departures(demoTitle, demo, false), t, t.second % 2 == 0, prefs.color, prefs.brightness, prefs.style,
+                    android.os.SystemClock.uptimeMillis())
             )
         }
         val ticker = object : Runnable {
-            override fun run() { drawPreview(); preview.postDelayed(this, 1_000L) }
+            override fun run() {
+                drawPreview()
+                preview.postDelayed(this, if (LedRenderer.scrolling) (1_000f / LedRenderer.SCROLL_DOTS_PER_S).toLong() else 1_000L)
+            }
         }
 
         // Styl tablicy: REAL (LED) vs MODERN (TXT)
@@ -441,7 +469,7 @@ class ConfigActivity : ComponentActivity() {
                     drawPreview()
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) = Widgets.renderAll(this@ConfigActivity)
+                override fun onStopTrackingTouch(sb: SeekBar?) { Widgets.renderAll(this@ConfigActivity) }
             })
         }, wrap)
 

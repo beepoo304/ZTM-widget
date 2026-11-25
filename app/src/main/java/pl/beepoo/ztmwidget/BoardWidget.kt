@@ -63,9 +63,12 @@ object Widgets {
     fun ids(ctx: Context): IntArray =
         AppWidgetManager.getInstance(ctx).getAppWidgetIds(ComponentName(ctx, BoardWidget::class.java))
 
-    fun renderAll(ctx: Context) {
+    /** Zwraca true, gdy na którejś tablicy coś się przewija (trzeba rysować częściej niż co 1 s). */
+    fun renderAll(ctx: Context): Boolean {
         val mgr = AppWidgetManager.getInstance(ctx)
-        ids(ctx).forEach { render(ctx, mgr, it) }
+        var scrolling = false
+        ids(ctx).forEach { if (render(ctx, mgr, it)) scrolling = true }
+        return scrolling
     }
 
     fun screenFor(ctx: Context, widgetId: Int, now: Long): Screen {
@@ -83,21 +86,25 @@ object Widgets {
         }
     }
 
-    fun render(ctx: Context, mgr: AppWidgetManager, widgetId: Int) {
-        try {
+    fun render(ctx: Context, mgr: AppWidgetManager, widgetId: Int): Boolean {
+        return try {
             val prefs = Prefs(ctx)
             val (w, h) = sizePx(ctx, mgr, widgetId)
             val time = LocalTime.now()
             val bmp = LedRenderer.render(
                 ctx, w, h, screenFor(ctx, widgetId, System.currentTimeMillis()),
-                time, time.second % 2 == 0, prefs.color, prefs.brightness, prefs.style
+                time, time.second % 2 == 0, prefs.color, prefs.brightness, prefs.style,
+                android.os.SystemClock.uptimeMillis()
             )
+            val scrolling = LedRenderer.scrolling
             val views = RemoteViews(ctx.packageName, R.layout.widget_board)
             views.setImageViewBitmap(R.id.board, bmp)
             views.setOnClickPendingIntent(R.id.root, clickIntent(ctx, widgetId, prefs.stopFor(widgetId) != null))
             mgr.updateAppWidget(widgetId, views)
+            scrolling
         } catch (e: Exception) {
             Log.w(TAG, "render $widgetId failed", e)
+            false
         }
     }
 
