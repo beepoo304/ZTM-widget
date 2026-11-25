@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Rect
@@ -48,6 +49,30 @@ object LedRenderer {
 
     private var typeface: Typeface? = null
 
+    /** Przewijanie za długich napisów: diody (REAL) lub dp-ish piksele (MODERN) na sekundę, pauza na starcie. */
+    const val SCROLL_DOTS_PER_S = 10f
+    private const val SCROLL_PAUSE_MS = 2_000L
+    /** MODERN: jak długo widać jeden kawałek długiej nazwy. */
+    private const val PAGE_MS = 3_000L
+
+    /** Czy ostatnio narysowana tablica ma przewijany napis (usługa rysuje wtedy częściej). */
+    @Volatile var scrolling = false
+        private set
+    private var animMs = 0L
+
+    /**
+     * Przesunięcie przewijanego napisu o szerokości [textW] w polu [boxW]: najpierw pauza,
+     * potem jazda w lewo w kółko (napis wraca z prawej po odstępie [gap]). 0 = mieści się.
+     */
+    private fun scrollOffset(textW: Float, boxW: Float, gap: Float, speed: Float): Float {
+        if (textW <= boxW) return 0f
+        scrolling = true
+        val period = textW + gap
+        val travelMs = (period / speed * 1000f).toLong()
+        val p = animMs % (SCROLL_PAUSE_MS + travelMs)
+        return if (p < SCROLL_PAUSE_MS) 0f else (p - SCROLL_PAUSE_MS) * speed / 1000f
+    }
+
     private fun textPaint(ctx: Context): Paint {
         val tf = typeface ?: ctx.resources.getFont(R.font.micro5).also { typeface = it }
         return Paint().apply {
@@ -63,7 +88,12 @@ object LedRenderer {
     private var cachedSprite: Bitmap? = null
     private var spriteKey: String? = null
 
-    /** Rysuje całą tablicę w bitmapie o rozmiarze widgetu (piksele). */
+    /**
+     * Rysuje całą tablicę w bitmapie o rozmiarze widgetu (piksele).
+     * Synchronizowane: podgląd (wątek UI) i widget (usługa) dzielą cache bitmap – bez tego jeden
+     * wątek zwalniał (recycle) tło, którym drugi właśnie rysował, i aplikacja się wywalała.
+     */
+    @Synchronized
     fun render(
         ctx: Context,
         wPx: Int,
@@ -73,8 +103,11 @@ object LedRenderer {
         blink: Boolean,
         colorIdx: Int,
         brightness: Int,
-        style: Int = Prefs.STYLE_REAL
+        style: Int = Prefs.STYLE_REAL,
+        animMs: Long = 0L
     ): Bitmap {
+        this.animMs = animMs
+        scrolling = false
         return if (style == Prefs.STYLE_MODERN) {
             renderModern(ctx, wPx, hPx, screen, now, blink, colorIdx, brightness)
         } else {
@@ -226,8 +259,9 @@ object LedRenderer {
             color = textSecondary
         }
         c.save()
-        c.clipRect(padX, padY, clockX - padX * 0.4f, padY + headerH)
-        c.drawText(title.uppercase(PL), padX, headerBaseline, titlePaint)
+        val titleRight = if (screen is Screen.Paused) w - padX else clockX - padX * 0.4f
+        c.clipRect(padX, padY, titleRight, padY + headerH)
+        drawScrolling(c, title.uppercase(PL), padX, titleRight - padX, headerBaseline, titlePaint, h / ROWS.toFloat())
         c.restore()
 
         val sepY = padY + headerH
@@ -297,7 +331,7 @@ object LedRenderer {
                     // Kierunek
                     c.save()
                     c.clipRect(destLeft, contentTop + i * rowH, destRight, contentTop + (i + 1) * rowH)
-                    c.drawText(d.destination, destLeft, baseline, destPaint)
+                    drawScrolling(c, d.destination, destLeft, destRight - destLeft, baseline, destPaint, h / ROWS.toFloat())
                     c.restore()
 
                     // Czas
@@ -326,6 +360,39 @@ object LedRenderer {
         }
 
         return out
+    }
+
+    /**
+     * Napis w polu [left, left+boxW] (clip ustawia wołający). Za długi pokazujemy na zmianę
+     * kawałkami co [PAGE_MS], zaczynając zawsze od słowa – gładki tekst przy 10 klatkach/s szarpie,
+     * a zmiana co kilka sekund wygląda czysto na każdym telefonie (i wystarcza rysowanie co 1 s).
+     * Brzeg, za którym jest ciąg dalszy, jest wygaszony.
+     */
+    private fun drawScrolling(c: Canvas, s: String, left: Float, boxW: Float, baseline: Float, p: Paint, @Suppress("UNUSED_PARAMETER") dot: Float) {
+        val tw = p.measureText(s)
+        if (tw <= boxW || boxW < p.textSize) { c.drawText(s, left, baseline, p); return }
+        // Początki słów (x w pikselach) – kawałek zaczyna się od ostatniego słowa, które jeszcze się mieści.
+        val starts = listOf(0f) + s.indices.filter { s[it] == ' ' && it + 1 < s.length }.map { p.measureText(s, 0, it + 1) }
+        val offs = mutableListOf(0f)
+        while (offs.last() + boxW < tw) {
+            val cur = offs.last()
+            val next = starts.lastOrNull { it > cur && it <= cur + boxW * 0.9f } ?: (cur + boxW * 0.85f)
+            offs += min(next, tw - boxW + p.textSize * 0.3f)
+        }
+        val off = offs[((animMs / PAGE_MS) % offs.size).toInt()]
+        c.drawText(s, left - off, baseline, p)
+        val fade = min(p.textSize * 0.9f, boxW * 0.15f)
+        val top = baseline - p.textSize * 1.2f
+        val bottom = baseline + p.textSize * 0.4f
+        val fp = Paint()
+        if (off + boxW < tw) {
+            fp.shader = LinearGradient(left + boxW - fade, 0f, left + boxW, 0f, 0x00000000, 0xFF000000.toInt(), Shader.TileMode.CLAMP)
+            c.drawRect(left + boxW - fade, top, left + boxW, bottom, fp)
+        }
+        if (off > 0f) {
+            fp.shader = LinearGradient(left, 0f, left + fade, 0f, 0xFF000000.toInt(), 0x00000000, Shader.TileMode.CLAMP)
+            c.drawRect(left, top, left + fade, bottom, fp)
+        }
     }
 
     private fun drawCenteredMessage(c: Canvas, text: String, cx: Float, cy: Float, color: Int, size: Float) {
@@ -364,6 +431,17 @@ object LedRenderer {
             c.restore()
         }
         fun textRight(s: String, right: Int, row: Int) = text(s, right - p.measureText(s), row)
+        // Za długi napis przesuwa się o całe diody, jak na prawdziwej tablicy.
+        fun scrollText(s: String, left: Int, row: Int, right: Int) {
+            val tw = p.measureText(s)
+            val gap = max((right - left) * 0.35f, 12f)
+            val off = floor(scrollOffset(tw, (right - left).toFloat(), gap, SCROLL_DOTS_PER_S))
+            c.save()
+            c.clipRect(left, ROW_TOP[row], right, ROW_TOP[row] + ROW_H)
+            c.drawText(s, left - off, (ROW_TOP[row] + baseline).toFloat(), p)
+            if (off > 0f) c.drawText(s, left - off + tw + gap, (ROW_TOP[row] + baseline).toFloat(), p)
+            c.restore()
+        }
         fun center(s: String, row: Int) = text(s, ((cols - p.measureText(s)) / 2f).coerceAtLeast(1f), row)
 
         // Nagłówek: nazwa przystanku + zegar z migającym dwukropkiem.
@@ -382,7 +460,7 @@ object LedRenderer {
             if (blink) text(":", clockLeft + p.measureText(hh), 0)
             textRight(mm, clockRight, 0)
         }
-        text(title.uppercase(PL), 1f, 0, (clockLeft - 4).toInt())
+        scrollText(title.uppercase(PL), 1, 0, if (screen is Screen.Paused) cols - 1 else (clockLeft - 4).toInt())
 
         when (screen) {
             Screen.NoStop -> { center("DOTKNIJ, ABY", 2); center("WYBRAĆ PRZYSTANEK", 3) }
@@ -398,7 +476,7 @@ object LedRenderer {
                 deps.forEachIndexed { i, d ->
                     val row = i + 1
                     text(d.line.uppercase(PL), 1f, row)
-                    text(d.destination.uppercase(PL), dirX, row, (timeRight - timeW - 3).toInt())
+                    scrollText(d.destination.uppercase(PL), dirX.toInt(), row, (timeRight - timeW - 3).toInt())
                     if (d.atStop) { if (blink) textRight(">>>", timeRight, row) }
                     else textRight(d.time, timeRight, row)
                 }

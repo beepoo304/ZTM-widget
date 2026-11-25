@@ -7,9 +7,11 @@
 html,body,#map{margin:0;height:100%;background:#1b1f22}
 .st{width:30px;height:30px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 1px 4px #0008;box-sizing:border-box}
 .st.t{background:#f0c94b}.st.b{background:#ff8a65}.st.sel{border-color:#2e9e55;border-width:4px}
-.cd{position:absolute;left:50%;top:-9px;transform:translateX(-50%);background:#111;color:#fff;font:bold 9px sans-serif;border-radius:6px;padding:0 3px}
+.cd{position:absolute;white-space:nowrap;left:50%;top:-9px;transform:translateX(-50%);background:#111;color:#fff;font:bold 9px sans-serif;border-radius:6px;padding:0 3px}
 .pp b{font-size:14px}.pp .ty{color:#555;margin-top:2px}.pp .ln{color:#333;margin-top:4px;max-width:210px}
 .ob{margin-top:8px;background:#67d78a;color:#05210d;text-align:center;font-weight:700;border-radius:16px;padding:8px 12px;cursor:pointer;font-size:14px}
+.st.gr{width:34px;height:34px}.st.m{background:#b39ddb}
+.ls{max-height:300px;overflow-y:auto;margin-top:6px}.it{border-top:1px solid #ddd;padding:6px 0}.it .hd{font-size:14px}.it .ob{margin-top:5px;padding:6px 10px}
 .hint{position:absolute;z-index:500;left:50%;top:8px;transform:translateX(-50%);background:#000b;color:#fff;font:12px sans-serif;padding:4px 10px;border-radius:10px;display:none}
 </style></head><body><div id="map"></div><div class="hint" id="hint">Przybliż mapę, aby zobaczyć przystanki</div>
 <script>
@@ -24,8 +26,26 @@ function popup(s){const t=TYPE[s[5]]||TYPE[''];return '<div class="pp"><b>'+esc(
  '<div class="ln" id="ln'+s[0]+'">Linie: …</div><div class="ob" onclick="Android.observe(\''+s[0]+'\')">👁 Obserwuj</div></div>';}
 function load(){if(m.getZoom()<14){layer.clearLayers();hint.style.display='block';return;}hint.style.display='none';
  const b=m.getBounds();let list=[];try{list=JSON.parse(Android.stopsIn(b.getSouth(),b.getWest(),b.getNorth(),b.getEast()))}catch(e){}
- layer.clearLayers();for(const s of list){const mk=L.marker([s[3],s[4]],{icon:icon(s)}).bindPopup(popup(s),{minWidth:180});
-  mk.on('popupopen',()=>{OPEN=s[0];Android.lines(s[0]);});mk.addTo(layer);}}
+ layer.clearLayers();
+ // Słupki nachodzące na siebie na ekranie (węzły, dworce – w bazie ~1600 par bliżej niż 25 m) łączymy
+ // w jedną pinezkę z liczbą stanowisk; dotknięcie pokazuje listę stanowisk z liniami do wyboru.
+ const pts=list.map(s=>m.latLngToLayerPoint([s[3],s[4]])),used=new Array(list.length).fill(false);
+ for(let i=0;i<list.length;i++){if(used[i])continue;const g=[i];used[i]=true;
+  for(let j=i+1;j<list.length;j++)if(!used[j]&&g.some(k=>pts[k].distanceTo(pts[j])<NEAR)){g.push(j);used[j]=true;}
+  if(g.length===1)marker(list[i]);else group(g.map(k=>list[k]));}}
+function marker(s){const mk=L.marker([s[3],s[4]],{icon:icon(s)}).bindPopup(popup(s),{minWidth:180});
+ mk.on('popupopen',()=>{OPEN=s[0];Android.lines(s[0]);});mk.addTo(layer);}
+function group(g){g.sort((x,y)=>x[1].localeCompare(y[1],'pl')||x[2].localeCompare(y[2],'pl',{numeric:true}));
+ const lat=g.reduce((a,s)=>a+s[3],0)/g.length,lon=g.reduce((a,s)=>a+s[4],0)/g.length;
+ const t=TYPE[g[0][5]]||TYPE[''],mix=g.some(s=>(TYPE[s[5]]||TYPE[''])[0]!==t[0]),one=g.every(s=>s[1]===g[0][1]);
+ const ic=L.divIcon({className:'',iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-16],
+  html:'<div class="st gr '+(mix?'m':t[0])+(g.some(s=>s[1]===SEL)?' sel':'')+'">'+(mix?'🚏':t[1])+'<span class="cd">×'+g.length+'</span></div>'});
+ const rows=g.map(s=>{const u=TYPE[s[5]]||TYPE[''];return '<div class="it"><div class="hd">'+u[1]+' <b>'+(one?'':esc(s[1])+' ')+esc(s[2])+'</b> <span class="ty">'+u[2]+'</span></div>'+
+  '<div class="ln" id="ln'+s[0]+'">Linie: …</div><div class="ob" onclick="Android.observe(\''+s[0]+'\')">👁 Obserwuj '+esc(s[2])+'</div></div>';}).join('');
+ const mk=L.marker([lat,lon],{icon:ic}).bindPopup('<div class="pp">'+(one?'<b>'+esc(g[0][1])+'</b>':'<b>Przystanki w tym miejscu</b>')+
+  '<div class="ty">'+g.length+' stanowisk – wybierz</div><div class="ls">'+rows+'</div></div>',{minWidth:220,maxWidth:260});
+ mk.on('popupopen',()=>{OPEN=g[0][0];g.forEach(s=>Android.lines(s[0]));});mk.addTo(layer);}
+const NEAR=32;
 function setLines(id,txt){const e=document.getElementById('ln'+id);if(e)e.textContent=txt;}
 function focusStops(lat,lon,zoom,name){SEL=name;m.setView([lat,lon],zoom);load();}
 function fitStops(s,w,n,e,name){SEL=name;m.fitBounds([[s,w],[n,e]],{padding:[50,50],maxZoom:17});load();}

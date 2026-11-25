@@ -117,9 +117,13 @@ class BoardService : Service() {
             }
             if (isInteractive) {
                 fetchDue(prefs, ids, now)
-                Widgets.renderAll(this)
-                // Następne tyknięcie tuż po granicy pełnej sekundy: zegar zmienia się równo.
-                delay(1_000L - (System.currentTimeMillis() % 1_000L) + 15L)
+                if (Widgets.renderAll(this)) {
+                    // Przewijany napis: klatka co ~1 diodę (10/s), tylko przy włączonym ekranie.
+                    delay(FRAME_MS - (System.currentTimeMillis() % FRAME_MS))
+                } else {
+                    // Następne tyknięcie tuż po granicy pełnej sekundy: zegar zmienia się równo.
+                    delay(1_000L - (System.currentTimeMillis() % 1_000L) + 15L)
+                }
             } else {
                 // Ekran wyłączony: śpimy 15 s bez zbędnych wybudzeń CPU i bez renderowania.
                 // Włączenie ekranu (ACTION_SCREEN_ON) natychmiast anuluje to uśpienie i odświeża tablicę!
@@ -184,6 +188,7 @@ class BoardService : Service() {
         private const val FETCH_MS = 20_000L
         private const val RETRY_MS = 5_000L
         private const val MANUAL_MS = 5 * 60_000L
+        private val FRAME_MS = (1_000f / LedRenderer.SCROLL_DOTS_PER_S).toLong()
 
         @Volatile
         var isRunning = false
